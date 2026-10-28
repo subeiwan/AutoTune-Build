@@ -1,0 +1,42 @@
+name: build-autotune
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y ldid git make curl unzip
+
+      - name: Clone Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+
+      - name: Download iOS SDK
+        run: |
+          mkdir -p $HOME/theos/sdks
+          cd $HOME/theos/sdks
+          curl -L -o iPhoneOS17.5.sdk.tgz https://github.com/xybp888/iOS-SDKs/releases/download/17.5/iPhoneOS17.5.sdk.tgz
+          tar -zxf iPhoneOS17.5.sdk.tgz
+
+      - name: Build dylib
+        run: |
+          cd ./AutoTune
+          make package FINALPACKAGE=1
+
+      - name: Upload output dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoTune-dylib
+          path: ./AutoTune/.theos/obj/*.dylib
